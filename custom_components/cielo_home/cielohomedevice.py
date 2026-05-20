@@ -22,10 +22,10 @@ from .const import (
     FAN_LOW_VALUE,
     FAN_MEDIUM,
     FAN_MEDIUM_VALUE,
-    FAN_SUPER_HIGH,           # new
-    FAN_SUPER_HIGH_VALUE,     # new
-    FAN_ULTRA_HIGH,           # new
-    FAN_ULTRA_HIGH_VALUE,     # new
+    FAN_SUPER_HIGH,
+    FAN_SUPER_HIGH_VALUE,
+    FAN_ULTRA_HIGH,
+    FAN_ULTRA_HIGH_VALUE,
     FOLLOW_ME_OFF,
     FOLLOW_ME_ON,
     PRESET_MODES,
@@ -50,6 +50,7 @@ from .const import (
     SWING_POSITION6,
     SWING_POSITION6_VALUE,
 )
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -75,11 +76,6 @@ class CieloHomeDevice:
         self._connection_source = 1 if connection_source else 0
         self._user_id = user_id
         self._old_power = self._device["latestAction"]["power"]
-        # try:
-        #    self._device["appliance"]["swing"] = ""
-        #     self._device["appliance"]["fan"] = ""
-        # except KeyError:
-        #    pass
 
     def add_listener(self, listener: object) -> None:
         """None."""
@@ -102,31 +98,6 @@ class CieloHomeDevice:
         action["power"] = value
         self._device["latestAction"]["power"] = value
         self._send_msg(action, "power", action["power"])
-
-    #    def sync_ac_state_test(
-    #        self, power: bool, temp: int, mode: str, fan_speed: str, swing: str, preset: str
-    #    ) -> None:
-    #        """None."""
-    #        action = self._get_action()
-    #        action["power"] = "on" if power else "off"
-    #
-    #        if power:
-    #            if temp > 0:
-    #                action["temp"] = temp
-    #
-    #            if mode != "":
-    #                action["mode"] = mode
-    #
-    #            if fan_speed != "":
-    #                action["fanspeed"] = fan_speed
-    #
-    #            if swing != "":
-    #                action["swing"] = swing
-    #
-    #            if preset != "":
-    #                action["preset"] = preset
-    #
-    #        self._send_msg(action, "", "", default_action="actionControl")
 
     def sync_ac_state(
         self, power: bool, temp: int, mode: str, fan_speed: str, swing: str, preset: str
@@ -175,9 +146,6 @@ class CieloHomeDevice:
 
     def _send_light(self, value) -> None:
         """None."""
-        # if self._device["latestAction"]["light"] == value:
-        #     return
-
         action = self._get_action()
         action["light"] = value
         self._device["latestAction"]["light"] = value
@@ -200,7 +168,6 @@ class CieloHomeDevice:
         action["turbo"] = value
         self._device["latestAction"]["turbo"] = value
 
-        # Keep original logic but fix the OR condition
         if (
             self.get_device_type_version() != "BI03"
             and self.get_device_type_version() != "BI04"
@@ -257,8 +224,6 @@ class CieloHomeDevice:
 
     def _send_msg_calibration(self, action_string) -> None:
         """None."""
-        # Calibration frames use snake_case mac_address and action_string,
-        # unlike the camelCase used by actionControl/deviceSettings frames.
         msg = self._get_base_msg("calibration")
         msg["mac_address"] = msg.pop("macAddress")
         msg["action_string"] = action_string
@@ -293,7 +258,6 @@ class CieloHomeDevice:
             msg = {**msg, **overrides}
 
         self._api.send_action(msg)
-        # self._api.send_action(msg)
 
     def send_mode_heat(self) -> None:
         """None."""
@@ -304,7 +268,6 @@ class CieloHomeDevice:
         value = "cool"
         if self.get_available_modes() == "mode":
             value = "mode"
-
         self._send_mode(value)
 
     def send_mode_dry(self) -> None:
@@ -324,7 +287,6 @@ class CieloHomeDevice:
         if self.get_hvac_mode() != HVACMode.HEAT:
             self.send_mode_heat()
             time.sleep(2)
-
         self._send_mode("freezepoint")
 
     def _send_mode(self, value) -> None:
@@ -340,9 +302,7 @@ class CieloHomeDevice:
             return
 
         action = self._get_action()
-
         action["mode"] = value if value not in ("freezepoint") else "heat"
-        # action["mode"] = value
         self._device["latestAction"]["mode"] = value
         self._send_msg(action, "mode", value)
 
@@ -369,7 +329,7 @@ class CieloHomeDevice:
     def send_fan_speed_ultra_high(self) -> None:
         """None."""
         self._send_fan_speed(FAN_ULTRA_HIGH_VALUE)
-        
+
     def send_fan_speed_rotate(self) -> None:
         """None."""
         self._send_fan_speed(FAN_FANSPEED_VALUE)
@@ -574,14 +534,12 @@ class CieloHomeDevice:
         """None."""
         with contextlib.suppress(KeyError):
             return self._device["appliance"]["turbo"] != ""
-
         return False
 
     def get_is_followme_mode(self) -> bool:
         """None."""
         with contextlib.suppress(KeyError):
             return self._device["appliance"]["followme"] != ""
-
         return False
 
     def get_supportTargetTemp(self) -> bool:
@@ -599,14 +557,12 @@ class CieloHomeDevice:
                 for mode in modes:
                     if mode["mode"] == self.get_mode():
                         return mode["temp"]
-
         return self._device["appliance"]["temp"]
 
     def get_is_multi_mode_Temp_Range(self) -> bool:
         """None."""
         with contextlib.suppress(KeyError):
             return self._device["appliance"]["isMultiModeTempRange"] == 1
-
         return False
 
     def get_modes_temp(self) -> any:
@@ -665,49 +621,42 @@ class CieloHomeDevice:
         """None."""
         with contextlib.suppress(KeyError):
             return self._device["deviceSettings"]["screenDisplayValue"] != ""
-
         return False
 
     def get_screenIdleScreenTimeout_value(self) -> str:
         """None."""
         with contextlib.suppress(KeyError):
             return self._device["deviceSettings"]["idleScreenTimeout"]
-
         return ""
 
     def get_screenIdleScreenTimeout_available(self) -> bool:
         """None."""
         with contextlib.suppress(KeyError):
             return self._device["deviceSettings"]["idleScreenTimeout"] != ""
-
         return False
 
     def get_screenbrightness_value(self) -> str:
         """None."""
         with contextlib.suppress(KeyError):
             return self._device["deviceSettings"]["brightnessValue"]
-
         return ""
 
     def get_screenbrightness_available(self) -> bool:
         """None."""
         with contextlib.suppress(KeyError):
             return self._device["deviceSettings"]["brightnessValue"] != ""
-
         return False
 
     def get_screenidlebrightness_available(self) -> bool:
         """None."""
         with contextlib.suppress(KeyError):
             return self._device["deviceSettings"]["idleBrightnessValue"] != ""
-
         return False
 
     def get_screenidlebrightness_value(self) -> str:
         """None."""
         with contextlib.suppress(KeyError):
             return self._device["deviceSettings"]["idleBrightnessValue"]
-
         return False
 
     def get_appliance_type(self) -> str:
@@ -738,7 +687,6 @@ class CieloHomeDevice:
                 if self._device["latestAction"]["light"] == "on/off"
                 else self._device["latestAction"]["light"]
             )
-
         return ""
 
     def get_target_temperature(self) -> float:
@@ -755,7 +703,6 @@ class CieloHomeDevice:
         """None."""
         with contextlib.suppress(KeyError):
             return self._device["latestAction"]["turbo"]
-
         return "off"
 
     def get_fanspeed(self) -> str:
@@ -822,9 +769,9 @@ class CieloHomeDevice:
                 fan_modes.append(FAN_MEDIUM)
             elif mode == "high":
                 fan_modes.append(FAN_HIGH)
-            elif mode == "super_high":          # new
+            elif mode == "super_high":
                 fan_modes.append(FAN_SUPER_HIGH)
-            elif mode == "ultra_high":          # new
+            elif mode == "ultra_high":
                 fan_modes.append(FAN_ULTRA_HIGH)
 
         if len(fan_modes) > 0:
@@ -838,11 +785,9 @@ class CieloHomeDevice:
             range_temp: str = self.get_range_temp()
             device_unit: str = self.get_unit_of_temperature_appliance()
             range_temps: list = range_temp.split(":")
-
             return self.get_adjust_temp(
                 self.get_unit_of_temperature(), device_unit, int(range_temps[1])
             )
-
         return -1
 
     def get_min_temp(self) -> float:
@@ -850,13 +795,10 @@ class CieloHomeDevice:
         with contextlib.suppress(Exception):
             range_temp: str = self.get_range_temp()
             device_unit: str = self.get_unit_of_temperature_appliance()
-
             range_temps: list = range_temp.split(":")
-
             return self.get_adjust_temp(
                 self.get_unit_of_temperature(), device_unit, int(range_temps[0])
             )
-
         return -1
 
     def get_adjust_temp(
@@ -886,9 +828,9 @@ class CieloHomeDevice:
             return FAN_MEDIUM
         elif self.get_fanspeed() == "high":
             return FAN_HIGH
-        elif self.get_fanspeed() == FAN_SUPER_HIGH_VALUE:   # new
+        elif self.get_fanspeed() == FAN_SUPER_HIGH_VALUE:
             return FAN_SUPER_HIGH
-        elif self.get_fanspeed() == FAN_ULTRA_HIGH_VALUE:   # new
+        elif self.get_fanspeed() == FAN_ULTRA_HIGH_VALUE:
             return FAN_ULTRA_HIGH
         else:
             return FAN_AUTO
@@ -1096,15 +1038,15 @@ class CieloHomeDevice:
         """None."""
         if fan_mode == FAN_AUTO:
             self.send_fan_speed_auto()
-        elif fan_mode == FAN_HIGH:
-            self.send_fan_speed_high()
-        elif fan_mode == FAN_MEDIUM:
-            self.send_fan_speed_medium()
         elif fan_mode == FAN_LOW:
             self.send_fan_speed_low()
-        elif fan_mode == FAN_SUPER_HIGH:        # new
+        elif fan_mode == FAN_MEDIUM:
+            self.send_fan_speed_medium()
+        elif fan_mode == FAN_HIGH:
+            self.send_fan_speed_high()
+        elif fan_mode == FAN_SUPER_HIGH:
             self.send_fan_speed_super_high()
-        elif fan_mode == FAN_ULTRA_HIGH:        # new
+        elif fan_mode == FAN_ULTRA_HIGH:
             self.send_fan_speed_ultra_high()
         else:
             pass
@@ -1124,9 +1066,7 @@ class CieloHomeDevice:
                     else:
                         self._device["deviceStatus"] = data["device_status"]
                     self._device["latestAction"]["temp"] = data["action"]["temp"]
-                    self._device["latestAction"]["fanspeed"] = data["action"][
-                        "fanspeed"
-                    ]
+                    self._device["latestAction"]["fanspeed"] = data["action"]["fanspeed"]
                     self._device["latestAction"]["mode"] = data["action"]["mode"]
                     self._device["latestAction"]["power"] = data["action"]["power"]
                     self._old_power = self._device["latestAction"]["power"]
@@ -1141,14 +1081,10 @@ class CieloHomeDevice:
                         self._device["latestAction"]["light"] = data["action"]["light"]
 
                     with contextlib.suppress(KeyError):
-                        self._device["latestAction"]["followme"] = data["action"][
-                            "followme"
-                        ]
+                        self._device["latestAction"]["followme"] = data["action"]["followme"]
 
                     with contextlib.suppress(KeyError):
-                        self._device["latestAction"]["preset"] = data["action"][
-                            "preset"
-                        ]
+                        self._device["latestAction"]["preset"] = data["action"]["preset"]
 
             with contextlib.suppress(KeyError):
                 if data["message_type"] == "DeviceSettingsAck":
@@ -1156,21 +1092,16 @@ class CieloHomeDevice:
                         self._device["deviceSettings"]["screenDisplayValue"] = "1"
                     else:
                         self._device["deviceSettings"]["screenDisplayValue"] = "0"
-
                     self._device["deviceSettings"]["brightnessValue"] = data["H2"]
 
             with contextlib.suppress(KeyError):
                 if data["message_type"] == "CalibrationAck":
-                    self._device["tempCalibrationOffset"] = data[
-                        "temp_calibration_offset"
-                    ]
+                    self._device["tempCalibrationOffset"] = data["temp_calibration_offset"]
 
             self.dispatch_state_timer()
-            # self.dispatch_state_updated()
 
     def state_device_receive(self, device_state):
         """None."""
-        # Safely copy appliance data if it exists
         if "appliance" in self._device:
             device_state["appliance"] = self._device["appliance"]
         self._device = device_state
