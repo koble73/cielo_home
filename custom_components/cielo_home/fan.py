@@ -44,12 +44,12 @@ class CieloFanEntity(FanEntity):
     reports, so this works for any Cielo device regardless of how many
     speeds it supports (3, 4, 5, etc.).
 
-    Percentages are distributed evenly across the available speeds.
-    For 5 speeds: Low=20%, Medium=40%, High=60%, Super High=80%, Ultra High=100%
-    For 3 speeds: Low=33%, Medium=67%, High=100%
+    Percentages are distributed evenly across the available speeds:
+      3 speeds -> Low=33%,  Medium=67%,  High=100%
+      5 speeds -> Low=20%,  Medium=40%,  High=60%,  Super High=80%,  Ultra High=100%
 
-    Auto mode is treated separately -- setting percentage to 0 or calling
-    turn_off returns the fan to Auto without powering off the AC.
+    Setting percentage to 0 or calling turn_off returns the fan to Auto
+    without powering off the AC unit.
     """
 
     _attr_has_entity_name = True
@@ -57,7 +57,7 @@ class CieloFanEntity(FanEntity):
     _attr_supported_features = FanEntityFeature.SET_SPEED
 
     def __init__(self, cw_device: CieloHomeDevice) -> None:
-        """Initialize and build speed table from available fan modes."""
+        """Initialize and build speed table dynamically from available fan modes."""
         self._cw_device = cw_device
 
         # Get all available modes from the device, excluding Auto
@@ -65,12 +65,12 @@ class CieloFanEntity(FanEntity):
         self._speed_modes = [m for m in raw_modes if m != FAN_AUTO]
 
         if not self._speed_modes:
-            # Fallback for devices with unknown modes
+            # Fallback for devices with unrecognised modes
             self._speed_modes = [FAN_LOW, FAN_MEDIUM, FAN_HIGH]
 
         count = len(self._speed_modes)
 
-        # Distribute percentages evenly -- last step is always 100%
+        # Distribute percentages evenly -- last step is always exactly 100%
         self._pct_steps = [round((i + 1) * 100 / count) for i in range(count)]
         self._mode_to_pct: dict[str, int] = {
             mode: pct for mode, pct in zip(self._speed_modes, self._pct_steps)
@@ -80,7 +80,7 @@ class CieloFanEntity(FanEntity):
         }
 
         _LOGGER.debug(
-            "%s: fan speed table: %s",
+            "%s: fan speed table built: %s",
             cw_device.get_name(),
             self._mode_to_pct,
         )
@@ -93,7 +93,7 @@ class CieloFanEntity(FanEntity):
         )
 
     async def async_added_to_hass(self) -> None:
-        """Register as a listener so device state changes push to HA."""
+        """Register as a listener so device state changes push to HA immediately."""
         self._cw_device.add_listener(self)
 
     async def state_updated(self) -> None:
@@ -120,7 +120,11 @@ class CieloFanEntity(FanEntity):
         return len(self._speed_modes)
 
     async def async_set_percentage(self, percentage: int) -> None:
-        """Set fan speed from a percentage by snapping to the nearest step."""
+        """Set fan speed from a percentage by snapping to the nearest step.
+
+        0% sets fan to Auto. All other values snap to the nearest defined
+        step and map to the corresponding fan mode.
+        """
         if percentage == 0:
             _LOGGER.debug(
                 "%s: setting fan to Auto (percentage=0)",
