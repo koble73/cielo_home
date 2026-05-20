@@ -22,6 +22,10 @@ from .const import (
     FAN_LOW_VALUE,
     FAN_MEDIUM,
     FAN_MEDIUM_VALUE,
+    FAN_SUPER_HIGH,           # new
+    FAN_SUPER_HIGH_VALUE,     # new
+    FAN_ULTRA_HIGH,           # new
+    FAN_ULTRA_HIGH_VALUE,     # new
     FOLLOW_ME_OFF,
     FOLLOW_ME_ON,
     PRESET_MODES,
@@ -46,7 +50,6 @@ from .const import (
     SWING_POSITION6,
     SWING_POSITION6_VALUE,
 )
-
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -359,6 +362,14 @@ class CieloHomeDevice:
         """None."""
         self._send_fan_speed(FAN_AUTO_VALUE)
 
+    def send_fan_speed_super_high(self) -> None:
+        """None."""
+        self._send_fan_speed(FAN_SUPER_HIGH_VALUE)
+
+    def send_fan_speed_ultra_high(self) -> None:
+        """None."""
+        self._send_fan_speed(FAN_ULTRA_HIGH_VALUE)
+        
     def send_fan_speed_rotate(self) -> None:
         """None."""
         self._send_fan_speed(FAN_FANSPEED_VALUE)
@@ -811,6 +822,10 @@ class CieloHomeDevice:
                 fan_modes.append(FAN_MEDIUM)
             elif mode == "high":
                 fan_modes.append(FAN_HIGH)
+            elif mode == "super_high":          # new
+                fan_modes.append(FAN_SUPER_HIGH)
+            elif mode == "ultra_high":          # new
+                fan_modes.append(FAN_ULTRA_HIGH)
 
         if len(fan_modes) > 0:
             return fan_modes
@@ -871,6 +886,10 @@ class CieloHomeDevice:
             return FAN_MEDIUM
         elif self.get_fanspeed() == "high":
             return FAN_HIGH
+        elif self.get_fanspeed() == FAN_SUPER_HIGH_VALUE:   # new
+            return FAN_SUPER_HIGH
+        elif self.get_fanspeed() == FAN_ULTRA_HIGH_VALUE:   # new
+            return FAN_ULTRA_HIGH
         else:
             return FAN_AUTO
 
@@ -1083,6 +1102,10 @@ class CieloHomeDevice:
             self.send_fan_speed_medium()
         elif fan_mode == FAN_LOW:
             self.send_fan_speed_low()
+        elif fan_mode == FAN_SUPER_HIGH:        # new
+            self.send_fan_speed_super_high()
+        elif fan_mode == FAN_ULTRA_HIGH:        # new
+            self.send_fan_speed_ultra_high()
         else:
             pass
 
