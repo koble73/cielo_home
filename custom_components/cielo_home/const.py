@@ -33,9 +33,9 @@ PRESET_TURBO = "Turbo"
 PRESET_MODES = [PRESET_NONE, PRESET_TURBO]
 
 FAN_AUTO = "auto"
-FAN_LOW = "Low"
-FAN_MEDIUM = "Medium"
-FAN_HIGH = "High"
+FAN_LOW = "low"
+FAN_MEDIUM = "medium"
+FAN_HIGH = "high"
 
 
 FAN_AUTO_VALUE = "auto"
