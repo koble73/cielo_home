@@ -17,35 +17,11 @@ from .const import (
     FAN_HIGH,
     FAN_LOW,
     FAN_MEDIUM,
+    FAN_SUPER_HIGH,
+    FAN_ULTRA_HIGH,
 )
 
 _LOGGER = logging.getLogger(__name__)
-
-# Percentage steps and fan mode mappings when Turbo is NOT available (3 speeds)
-PCT_STEPS_NO_TURBO = [33, 66, 100]
-FAN_MODE_TO_PCT_NO_TURBO: dict[str, int] = {
-    FAN_LOW: 33,
-    FAN_MEDIUM: 66,
-    FAN_HIGH: 100,
-}
-PCT_TO_FAN_MODE_NO_TURBO: dict[int, str] = {
-    33: FAN_LOW,
-    66: FAN_MEDIUM,
-    100: FAN_HIGH,
-}
-
-# Percentage steps and fan mode mappings when Turbo IS available (4 speeds)
-PCT_STEPS_TURBO = [25, 50, 75, 100]
-FAN_MODE_TO_PCT_TURBO: dict[str, int] = {
-    FAN_LOW: 25,
-    FAN_MEDIUM: 50,
-    FAN_HIGH: 75,
-}
-PCT_TO_FAN_MODE_TURBO: dict[int, str] = {
-    25: FAN_LOW,
-    50: FAN_MEDIUM,
-    75: FAN_HIGH,
-}
 
 
 async def async_setup_entry(
@@ -62,16 +38,18 @@ async def async_setup_entry(
 
 
 class CieloFanEntity(FanEntity):
-    """Fan entity that exposes the AC fan speed of a Cielo Home device.
+    """Fan entity that exposes AC fan speed for a Cielo Home device.
 
-    On devices that support Turbo, four discrete speeds are exposed:
-    Low (25%), Medium (50%), High (75%), Turbo (100%).
+    Speed steps are built dynamically from whatever fan modes the device
+    reports, so this works for any Cielo device regardless of how many
+    speeds it supports (3, 4, 5, etc.).
 
-    On devices without Turbo, three speeds are exposed:
-    Low (33%), Medium (66%), High (100%).
+    Percentages are distributed evenly across the available speeds.
+    For 5 speeds: Low=20%, Medium=40%, High=60%, Super High=80%, Ultra High=100%
+    For 3 speeds: Low=33%, Medium=67%, High=100%
 
-    Setting percentage to 0 or calling turn_off returns the fan to Auto.
-    Turning the entity off does NOT power off the AC unit.
+    Auto mode is treated separately -- setting percentage to 0 or calling
+    turn_off returns the fan to Auto without powering off the AC.
     """
 
     _attr_has_entity_name = True
@@ -79,21 +57,33 @@ class CieloFanEntity(FanEntity):
     _attr_supported_features = FanEntityFeature.SET_SPEED
 
     def __init__(self, cw_device: CieloHomeDevice) -> None:
-        """Initialize the fan speed entity."""
+        """Initialize and build speed table from available fan modes."""
         self._cw_device = cw_device
-        self._has_turbo = cw_device.get_is_turbo_mode()
 
-        # Select the correct lookup tables based on Turbo support
-        if self._has_turbo:
-            self._pct_steps = PCT_STEPS_TURBO
-            self._mode_to_pct = FAN_MODE_TO_PCT_TURBO
-            self._pct_to_mode = PCT_TO_FAN_MODE_TURBO
-            self._speed_count = 4
-        else:
-            self._pct_steps = PCT_STEPS_NO_TURBO
-            self._mode_to_pct = FAN_MODE_TO_PCT_NO_TURBO
-            self._pct_to_mode = PCT_TO_FAN_MODE_NO_TURBO
-            self._speed_count = 3
+        # Get all available modes from the device, excluding Auto
+        raw_modes = cw_device.get_fan_modes() or []
+        self._speed_modes = [m for m in raw_modes if m != FAN_AUTO]
+
+        if not self._speed_modes:
+            # Fallback for devices with unknown modes
+            self._speed_modes = [FAN_LOW, FAN_MEDIUM, FAN_HIGH]
+
+        count = len(self._speed_modes)
+
+        # Distribute percentages evenly -- last step is always 100%
+        self._pct_steps = [round((i + 1) * 100 / count) for i in range(count)]
+        self._mode_to_pct: dict[str, int] = {
+            mode: pct for mode, pct in zip(self._speed_modes, self._pct_steps)
+        }
+        self._pct_to_mode: dict[int, str] = {
+            pct: mode for pct, mode in zip(self._pct_steps, self._speed_modes)
+        }
+
+        _LOGGER.debug(
+            "%s: fan speed table: %s",
+            cw_device.get_name(),
+            self._mode_to_pct,
+        )
 
         self._attr_unique_id = f"{cw_device.get_uniqueid()}_fan_speed"
         self._attr_device_info = DeviceInfo(
@@ -103,7 +93,7 @@ class CieloFanEntity(FanEntity):
         )
 
     async def async_added_to_hass(self) -> None:
-        """Register as a listener so state changes push to HA immediately."""
+        """Register as a listener so device state changes push to HA."""
         self._cw_device.add_listener(self)
 
     async def state_updated(self) -> None:
@@ -119,55 +109,36 @@ class CieloFanEntity(FanEntity):
     def percentage(self) -> int | None:
         """Return the current fan speed as a percentage.
 
-        Turbo mode returns 100% on turbo-capable devices.
-        Auto mode returns 0. Low/Medium/High map per the active table.
+        Auto mode returns 0. All other modes map per the dynamic table.
         """
-        if self._has_turbo and self._cw_device.get_turbo() == "on":
-            return 100
-
         fan_mode = self._cw_device.get_fan_mode()
         return self._mode_to_pct.get(fan_mode, 0)
 
     @property
     def speed_count(self) -> int:
         """Return the number of discrete speed steps."""
-        return self._speed_count
+        return len(self._speed_modes)
 
     async def async_set_percentage(self, percentage: int) -> None:
-        """Set fan speed from a percentage by snapping to the nearest step.
-
-        0% sets fan to Auto.
-        100% on a turbo-capable device activates Turbo.
-        All other values snap to the nearest step and map to Low/Medium/High.
-        """
+        """Set fan speed from a percentage by snapping to the nearest step."""
         if percentage == 0:
             _LOGGER.debug(
                 "%s: setting fan to Auto (percentage=0)",
                 self._cw_device.get_name(),
             )
-            await self._set_fan_auto()
+            await self._set_auto()
             return
 
-        if self._has_turbo and percentage == 100:
-            _LOGGER.debug("%s: activating Turbo", self._cw_device.get_name())
-            await self._set_turbo_on()
-            return
-
-        nearest_step = min(self._pct_steps, key=lambda s: abs(s - percentage))
-        fan_mode = self._pct_to_mode.get(nearest_step)
+        nearest = min(self._pct_steps, key=lambda s: abs(s - percentage))
+        fan_mode = self._pct_to_mode[nearest]
 
         _LOGGER.debug(
             "%s: setting fan to %s (requested %s%%, snapped to %s%%)",
             self._cw_device.get_name(),
             fan_mode,
             percentage,
-            nearest_step,
+            nearest,
         )
-
-        # If Turbo is currently on, turn it off before changing fan speed
-        if self._has_turbo and self._cw_device.get_turbo() == "on":
-            await self.hass.async_add_executor_job(self._cw_device.send_turbo_off)
-
         await self.hass.async_add_executor_job(
             self._cw_device.send_fan_mode, fan_mode
         )
@@ -178,10 +149,7 @@ class CieloFanEntity(FanEntity):
         preset_mode: str | None = None,
         **kwargs: Any,
     ) -> None:
-        """Turn on fan speed control.
-
-        Applies the given percentage if provided, otherwise defaults to Medium.
-        """
+        """Turn on -- apply percentage if given, otherwise default to Medium."""
         if percentage is not None:
             await self.async_set_percentage(percentage)
         else:
@@ -189,33 +157,16 @@ class CieloFanEntity(FanEntity):
                 "%s: turn_on with no percentage, defaulting to Medium",
                 self._cw_device.get_name(),
             )
-            if self._has_turbo and self._cw_device.get_turbo() == "on":
-                await self.hass.async_add_executor_job(self._cw_device.send_turbo_off)
             await self.hass.async_add_executor_job(
                 self._cw_device.send_fan_mode, FAN_MEDIUM
             )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Return fan to Auto mode (does NOT power off the AC)."""
-        _LOGGER.debug(
-            "%s: turn_off called, setting fan to Auto",
-            self._cw_device.get_name(),
-        )
-        await self._set_fan_auto()
+        await self._set_auto()
 
-    # -- Internal helpers --
-
-    async def _set_fan_auto(self) -> None:
-        """Set fan to Auto, turning off Turbo first if active."""
-        if self._has_turbo and self._cw_device.get_turbo() == "on":
-            await self.hass.async_add_executor_job(self._cw_device.send_turbo_off)
+    async def _set_auto(self) -> None:
+        """Set fan to Auto mode."""
         await self.hass.async_add_executor_job(
             self._cw_device.send_fan_mode, FAN_AUTO
         )
-
-    async def _set_turbo_on(self) -> None:
-        """Activate Turbo mode at High fan speed as the base."""
-        await self.hass.async_add_executor_job(
-            self._cw_device.send_fan_mode, FAN_HIGH
-        )
-        await self.hass.async_add_executor_job(self._cw_device.send_turbo_on)
