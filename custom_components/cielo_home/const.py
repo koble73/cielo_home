@@ -1,5 +1,4 @@
 """Constants for the Cielo Home integration."""
-
 from homeassistant.components.climate import PRESET_NONE
 
 DOMAIN = "cielo_home"
@@ -17,8 +16,6 @@ SWING_POSITION3 = "Position 3"
 SWING_POSITION4 = "Position 4"
 SWING_POSITION5 = "Position 5"
 SWING_POSITION6 = "Position 6"
-
-
 SWING_ADJUST_VALUE = "adjust"
 SWING_AUTO_STOP_VALUE = "auto/stop"
 SWING_AUTO_VALUE = "auto"
@@ -36,15 +33,17 @@ FAN_AUTO = "auto"
 FAN_LOW = "low"
 FAN_MEDIUM = "medium"
 FAN_HIGH = "high"
-
+FAN_SUPER_HIGH = "super_high"
+FAN_ULTRA_HIGH = "ultra_high"
 
 FAN_AUTO_VALUE = "auto"
 FAN_LOW_VALUE = "low"
 FAN_MEDIUM_VALUE = "medium"
 FAN_HIGH_VALUE = "high"
+FAN_SUPER_HIGH_VALUE = "super_high"
+FAN_ULTRA_HIGH_VALUE = "ultra_high"
 FAN_FANSPEED_VALUE = "fanspeed"
 
 FOLLOW_ME_ON = "on"
 FOLLOW_ME_OFF = "off"
-
 DEVICE_BREEZ_MAX = "BREEZ-MAX"
