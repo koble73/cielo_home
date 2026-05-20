@@ -25,6 +25,8 @@ from .const import (
     FAN_HIGH_VALUE,
     FAN_LOW_VALUE,
     FAN_MEDIUM_VALUE,
+    FAN_SUPER_HIGH_VALUE,
+    FAN_ULTRA_HIGH_VALUE,
     PRESET_NONE,
     PRESET_TURBO,
     SWING_ADJUST_VALUE,
@@ -55,7 +57,14 @@ async def async_setup_entry(
 
     platform = entity_platform.async_get_current_platform()
 
-    list_fan_speed = [FAN_AUTO_VALUE, FAN_LOW_VALUE, FAN_MEDIUM_VALUE, FAN_HIGH_VALUE]
+    list_fan_speed = [
+        FAN_AUTO_VALUE,
+        FAN_LOW_VALUE,
+        FAN_MEDIUM_VALUE,
+        FAN_HIGH_VALUE,
+        FAN_SUPER_HIGH_VALUE,
+        FAN_ULTRA_HIGH_VALUE,
+    ]
     list_preset_mode = [PRESET_NONE, PRESET_TURBO]
     list_swing = [
         SWING_AUTO_VALUE,
@@ -150,7 +159,6 @@ class CieloHomeThermostat(CieloHomeEntity, ClimateEntity):
 
     def set_temperature(self, **kwargs: Any) -> None:
         """Set a new target temperature."""
-
         if ATTR_HVAC_MODE in kwargs:
             self.set_hvac_mode(HVACMode(kwargs[ATTR_HVAC_MODE]))
 
@@ -184,7 +192,6 @@ class CieloHomeThermostat(CieloHomeEntity, ClimateEntity):
 
     def set_swing_mode(self, swing_mode: str) -> None:
         """Set new target swing operation."""
-        # Update the new state
         self._device.send_swing_mode(swing_mode)
         self._update_internal_state()
 
