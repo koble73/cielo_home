@@ -25,6 +25,8 @@ from .const import (
     FAN_HIGH_VALUE,
     FAN_LOW_VALUE,
     FAN_MEDIUM_VALUE,
+    FAN_SUPER_HIGH_VALUE,
+    FAN_ULTRA_HIGH_VALUE,
     PRESET_NONE,
     PRESET_TURBO,
     SWING_ADJUST_VALUE,
@@ -55,7 +57,14 @@ async def async_setup_entry(
 
     platform = entity_platform.async_get_current_platform()
 
-    list_fan_speed = [FAN_AUTO_VALUE, FAN_LOW_VALUE, FAN_MEDIUM_VALUE, FAN_HIGH_VALUE]
+    list_fan_speed = [
+        FAN_AUTO_VALUE,
+        FAN_LOW_VALUE,
+        FAN_MEDIUM_VALUE,
+        FAN_HIGH_VALUE,
+        FAN_SUPER_HIGH_VALUE,
+        FAN_ULTRA_HIGH_VALUE,
+    ]
     list_preset_mode = [PRESET_NONE, PRESET_TURBO]
     list_swing = [
         SWING_AUTO_VALUE,
