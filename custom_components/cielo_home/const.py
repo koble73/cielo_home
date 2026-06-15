@@ -44,15 +44,18 @@ PRESET_TURBO = "Turbo"
 PRESET_MODES = [PRESET_NONE, PRESET_TURBO]
 
 FAN_AUTO = "auto"
-FAN_LOW = "Low"
-FAN_MEDIUM = "Medium"
-FAN_HIGH = "High"
-
+FAN_LOW = "low"
+FAN_MEDIUM = "medium"
+FAN_HIGH = "high"
+FAN_SUPER_HIGH = "super_high"
+FAN_ULTRA_HIGH = "ultra_high"
 
 FAN_AUTO_VALUE = "auto"
 FAN_LOW_VALUE = "low"
 FAN_MEDIUM_VALUE = "medium"
 FAN_HIGH_VALUE = "high"
+FAN_SUPER_HIGH_VALUE = "super_high"
+FAN_ULTRA_HIGH_VALUE = "ultra_high"
 FAN_FANSPEED_VALUE = "fanspeed"
 
 FOLLOW_ME_ON = "on"
