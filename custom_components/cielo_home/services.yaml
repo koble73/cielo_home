@@ -89,6 +89,8 @@ sync_ac_state:
             - "low"
             - "medium"
             - "high"
+            - "super_high"
+            - "ultra_high"
     # Key of the field
     swing:
       # Field name as shown in UI
